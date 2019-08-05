@@ -12,9 +12,8 @@ function main {
 	if [ `whoami` != "root" ];
 	then
 		echo "Execute novamente como ROOT...";
-		sudo su
+		exit
 	else
-		#spinner&
 		printf "Configurando...";
 	fi
 
@@ -31,8 +30,13 @@ function main {
 function configForemost {
 	if  [[ -f  "/etc/foremost.conf" ]];
 	then
-		echo $dhavMagicNumber >> /etc/foremost.conf
-		extractDHAV;
+		if [ $(cat /etc/foremost.conf | grep dhav | wc -l) -eq 1 ];
+		then
+			extractDHAV;
+		else
+			echo $dhavMagicNumber >> /etc/foremost.conf
+			extractDHAV;
+		fi;
 	else
 		echo "" >> /etc/foremost.conf
 		main;
@@ -44,13 +48,17 @@ function extractDHAV {
 	printf "Extraindo..."
 	foremost -o $folder $fileDD
 	cd $folder/dhav
+	clear
+	echo "Extraido `ls | wc -l` Frames em $folder - Tratando..."
+	sleep 1
 	for file in `ls`;
 	do
 		header=$(cat $file | hexdump -ve '16/1 "%02x"' | cut -c1-44)
-		typeFrame=$(echo $header | cut -c9-10)
-		numCamFrame=$(echo $header | cut -c13-14 | bc);
-		$(echo 'ibase=16;obase=2;``' | bc)
-
+		echo $header
+		typeFrame=$(echo ${header^^} | cut -c9-10)
+		numCamFrame=$(echo `echo ${header^^} | cut -c13-14 | bc`+1 | bc);
+		
+		#$(echo 'ibase=16;obase=2;``' | bc)
 	done
 }
 
@@ -60,5 +68,6 @@ then
 	clear
 	main;
 else
-	echo "Aponte um arquivo de dump como argumento... ( extract.sh filename.dd )";
+	echo "Aponte um arquivo de dump como argumento... ( extract.sh filename.dd )"
+	main;
 fi
