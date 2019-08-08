@@ -46,8 +46,10 @@ function configForemost {
 function extractDHAV {
 	clear
 	printf "Extraindo..."
+	mkdir -m 777 $folder
 	foremost -o $folder $fileDD
 	sync
+	chmod -R 777 $folder/dhav
 	cd $folder/dhav
 	clear
 	echo "Extraido `ls | wc -l` Frames em $folder - Tratando..."
@@ -67,10 +69,11 @@ function extractDHAV {
 		then
 			mv $file CAM$numCamFrame/$filename;
 		else
-			mkdir CAM$numCamFrame
+			mkdir -m 777 CAM$numCamFrame
 			mv $file CAM$numCamFrame/$filename;
 		fi;
 	done
+	chmod -R 777 $folder
 }
 
 
