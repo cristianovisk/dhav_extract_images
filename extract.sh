@@ -54,11 +54,19 @@ function extractDHAV {
 	for file in `ls`;
 	do
 		header=$(cat $file | hexdump -ve '16/1 "%02x"' | cut -c1-44)
-		echo $header
+		idSeq=$(echo ${header^^} | cut -c17-24)
 		typeFrame=$(echo ${header^^} | cut -c9-10)
-		numCamFrame=$(echo `echo ${header^^} | cut -c13-14 | bc`+1 | bc);
-		
-		#$(echo 'ibase=16;obase=2;``' | bc)
+		numCamFrame=$(echo `echo ${header^^} | cut -c13-14 | bc`+1 | bc)
+		timestamp=$(echo ${header^^} | cut -c33-40)
+		filename=$(echo CAM$numCamFrame-`if [ $typeFrame == "FD" ]; then echo "P"; else echo "S";fi `-`python -c "hexArg='$idSeq';hexLittleEndian=hexArg[6:8],hexArg[4:6],hexArg[2:4],hexArg[0:2];hexBigEndian=(''.join(hexLittleEndian));print(int(hexBigEndian, 16))"`-`python ../../script/timestamp.py $timestamp`.dat)
+		echo $filename
+		if [[ -d CAM$numCamFrame ]];
+		then
+			mv $file CAM$numCamFrame/$filename;
+		else
+			mkdir CAM$numCamFrame
+			mv $file CAM$numCamFrame/$filename;
+		fi;
 	done
 }
 
