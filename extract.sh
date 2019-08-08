@@ -51,10 +51,13 @@ function extractDHAV {
 	sync
 	chmod -R 777 $folder/dhav
 	cd $folder/dhav
+	total=$(ls | wc -l)
 	clear
-	echo "Extraido `ls | wc -l` Frames em $folder - Tratando..."
-	sleep 1
+	echo "Extraido $total Frames em $folder - Tratando..."
+	sleep 2
+	clear
 	echo "FILENAME;HEADER;IDSEQ;TYPEFRAME;NUMCAM;DIA;MES;ANO;HORA;MINUTO;SEGUNDO" > ../../report_images_$fileDD.csv
+	num=0
 	for file in `ls`;
 	do
 		header=$(cat $file | hexdump -ve '16/1 "%02x"' | cut -c1-44)
@@ -62,9 +65,10 @@ function extractDHAV {
 		typeFrame=$(echo ${header^^} | cut -c9-10)
 		numCamFrame=$(echo `echo ${header^^} | cut -c13-14 | bc`+1 | bc)
 		timestamp=$(echo ${header^^} | cut -c33-40)
-		filename=$(echo CAM$numCamFrame-`python -c "hexArg='$idSeq';hexLittleEndian=hexArg[6:8],hexArg[4:6],hexArg[2:4],hexArg[0:2];hexBigEndian=(''.join(hexLittleEndian));print(int(hexBigEndian, 16))"`-`python ../../timestamp.py $timestamp 1`-$typeFrame.dat)
+		filename=$(echo `python -c "hexArg='$idSeq';hexLittleEndian=hexArg[6:8],hexArg[4:6],hexArg[2:4],hexArg[0:2];hexBigEndian=(''.join(hexLittleEndian));print(int(hexBigEndian, 16))"`-CAM$numCamFrame-`python ../../timestamp.py $timestamp 1`-$typeFrame.dat)
 		echo "$filename;$header;`python -c "hexArg='$idSeq';hexLittleEndian=hexArg[6:8],hexArg[4:6],hexArg[2:4],hexArg[0:2];hexBigEndian=(''.join(hexLittleEndian));print(int(hexBigEndian, 16))"`;$typeFrame;$numCamFrame;`python ../../timestamp.py $timestamp 2`" >> ../../report_images_$fileDD.csv
-		echo $filename
+		num=$(echo $num+1 | bc)
+		echo -ne "Categorizando imagens de $fileDD: $((${num}*100/${total})) %     \r"
 		if [[ -d CAM$numCamFrame ]];
 		then
 			mv $file CAM$numCamFrame/$filename;
@@ -75,7 +79,6 @@ function extractDHAV {
 	done
 	chmod -R 777 $folder
 }
-
 
 if [[ -f $fileDD ]];
 then
