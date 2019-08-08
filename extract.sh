@@ -58,7 +58,7 @@ function extractDHAV {
 		typeFrame=$(echo ${header^^} | cut -c9-10)
 		numCamFrame=$(echo `echo ${header^^} | cut -c13-14 | bc`+1 | bc)
 		timestamp=$(echo ${header^^} | cut -c33-40)
-		filename=$(echo CAM$numCamFrame-`if [ $typeFrame == "FD" ]; then echo "P"; else echo "S";fi `-`python -c "hexArg='$idSeq';hexLittleEndian=hexArg[6:8],hexArg[4:6],hexArg[2:4],hexArg[0:2];hexBigEndian=(''.join(hexLittleEndian));print(int(hexBigEndian, 16))"`-`python ../../script/timestamp.py $timestamp`.dat)
+		filename=$(echo CAM$numCamFrame-$typeFrame-`python -c "hexArg='$idSeq';hexLittleEndian=hexArg[6:8],hexArg[4:6],hexArg[2:4],hexArg[0:2];hexBigEndian=(''.join(hexLittleEndian));print(int(hexBigEndian, 16))"`-`python ../../timestamp.py $timestamp`.dat)
 		echo $filename
 		if [[ -d CAM$numCamFrame ]];
 		then
