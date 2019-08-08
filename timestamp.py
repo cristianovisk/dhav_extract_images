@@ -29,7 +29,9 @@ segundo=int(segundobin, 2)
 #print ("-----\nBINARIO: %s\n" %binario)
 #print ("ANO: %i - BIN ANO: %s \nMES: %i - BIN MES: %s\nDIA: %i - BIN DIA: %s\nHORA: %i - BIN HORA: %s\nMINUTO: %i - BIN MINUTO: %s\nSEGUNDO: %i - BIN SEGUNDO: %s" %(ano,anobin,mes,mesbin,dia,diabin,hora,horabin,minuto,minutobin,segundo,segundobin))
 #print ("TIME FINAL: %s/%s/%s as %s:%s:%s" %(dia,mes,ano,hora,minuto,segundo))
-print ("d%s-m%s-a%s_h%s-m%s-s%s" %(dia,mes,ano,hora,minuto,segundo))
-
+if sys.argv[2] == "1":
+    print ("d%s-m%s-a%s_h%s-m%s-s%s" %(dia,mes,ano,hora,minuto,segundo))
+if sys.argv[2] == "2":
+    print ("%s;%s;%s;%s;%s;%s" %(dia,mes,ano,hora,minuto,segundo))
 
 #bin(int("45a15d84", 16))[2:]
