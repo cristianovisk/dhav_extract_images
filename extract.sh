@@ -66,9 +66,9 @@ function extractDHAV {
 		numCamFrame=$(echo `echo ${header^^} | cut -c13-14 | bc`+1 | bc)
 		timestamp=$(echo ${header^^} | cut -c33-40)
 		filename=$(echo `python -c "hexArg='$idSeq';hexLittleEndian=hexArg[6:8],hexArg[4:6],hexArg[2:4],hexArg[0:2];hexBigEndian=(''.join(hexLittleEndian));print(int(hexBigEndian, 16))"`-CAM$numCamFrame-`python ../../timestamp.py $timestamp 1`-$typeFrame.dat)
-		echo "$filename;$header;`python -c "hexArg='$idSeq';hexLittleEndian=hexArg[6:8],hexArg[4:6],hexArg[2:4],hexArg[0:2];hexBigEndian=(''.join(hexLittleEndian));print(int(hexBigEndian, 16))"`;$typeFrame;$numCamFrame;`python ../../timestamp.py $timestamp 2`" >> ../../report_images_$fileDD.csv
+		echo "$folder/dhav/CAM$numCamFrame/$filename;$header;`python -c "hexArg='$idSeq';hexLittleEndian=hexArg[6:8],hexArg[4:6],hexArg[2:4],hexArg[0:2];hexBigEndian=(''.join(hexLittleEndian));print(int(hexBigEndian, 16))"`;$typeFrame;$numCamFrame;`python ../../timestamp.py $timestamp 2`" >> ../../report_images_$fileDD.csv
 		num=$(echo $num+1 | bc)
-		echo -ne "Categorizando imagens de $fileDD: $((${num}*100/${total})) %     \r"
+		echo -ne "Categorizando imagens de $fileDD: $((${num}*100/${total})) %  -- $num - $total   \r"
 		if [[ -d CAM$numCamFrame ]];
 		then
 			mv $file CAM$numCamFrame/$filename;
