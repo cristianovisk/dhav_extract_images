@@ -77,7 +77,20 @@ function extractDHAV {
 			mv $file CAM$numCamFrame/$filename;
 		fi;
 	done
-	chmod -R 777 $folder
+
+	for cam in `ls`;
+	do
+		totalframe=$(ls $cam | wc -l)
+		for frame in `ls $cam | sort -n`;
+		do
+			#echo $(pwd)
+			#numn=$(echo $numn+1 | bc)
+			echo -ne "Gerando video .h264 - Imbutindo frames $frame \r"
+			cat $cam/$frame >> $cam.h264;
+			#echo -ne "Gerando video .h264 - $((${numn}*100/${totalframe})) % \r";
+		done;
+	done
+#	chmod -R 777 $folder
 }
 
 if [[ -f $fileDD ]];
