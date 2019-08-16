@@ -1,5 +1,6 @@
 #!/usr/bin/env python3.7
 
+
 import sys
 import os
 import binascii
@@ -126,14 +127,14 @@ with open(arq, "rb") as bytes:
                     bytes.seek(header,0)
                     frameMatch=bytes.read(footer-header)
                     framename="%s_Extracted/CAM%s/%i-CAM%s-%i-%i-%i-%i-%i-%i-TF%i.dat" %(arq, camNumber, seqFrame, camNumber, timestamp['dia'], timestamp['mes'], timestamp['ano'],timestamp['hora'],timestamp['minuto'],timestamp['segundo'],int(binascii.b2a_hex(typeframe), 16))
-                    dateforma="20%i-%i-%i %i:%i:%i.000" %(timestamp['ano'], timestamp['mes'], timestamp['dia'], timestamp['hora'], timestamp['minuto'], timestamp['segundo'])
+                    dt = datetime(timestamp['ano']+2000, timestamp['mes'], timestamp['dia'], timestamp['hora'], timestamp['minuto'], timestamp['segundo'])
                     #print(dateforma)
                     with open(framename, "wb") as wframe:
                         wframe.write(frameMatch)
                         cursor.execute("""
                         INSERT INTO framesdhav (seqframe, cam, typeframe, sizeframe, dateframe, filescanned)
                         VALUES (%i, %s, %i, %i, '%s', '%s')
-                        """ %(seqFrame, camNumber, int(binascii.b2a_hex(typeframe), 16), sizeFrame, dateforma, arq))
+                        """ %(seqFrame, camNumber, int(binascii.b2a_hex(typeframe), 16), sizeFrame, dt, arq))
                     del header
                     del footer
             else:
