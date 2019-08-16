@@ -28,7 +28,7 @@ def createDB():
 
     # criando a tabela (schema)
     cursor.execute("""
-    CREATE TABLE framesdhav (
+    CREATE TABLE IF NOT EXISTS framesdhav (
             id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
             seqframe INTEGER NOT NULL,
             cam INTEGER NOT NULL,
