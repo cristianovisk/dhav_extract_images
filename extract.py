@@ -7,12 +7,11 @@ import binascii
 import time
 from datetime import datetime, time
 import sqlite3
-
+arq=sys.argv[1]
 now = datetime.now()
 beginning_of_day = datetime.combine(now.date(), time(0))
+print("%s Inicio: " %arq)
 print (now - beginning_of_day)
-
-arq=sys.argv[1]
 
 if os.path.isdir("%s_Extracted" %arq) == False: 
     os.system("mkdir %s_Extracted" %arq)
@@ -53,23 +52,54 @@ def timestamp_translate(timestamp):
     binario=bin(int('1'+hexBigEndian, 16))[3:]
 
     anobin=binario[0:6]
-    ano=int(anobin, 2)
+    if anobin.count('0') != 0:
+        ano=int(anobin, 2)
+    elif anobin.count('0') == 0:
+        ano=int(1)
+
     mesbin=binario[7:10]
-    mes=int(mesbin, 2)
+    if mesbin.count('0') != 0:
+        mes=int(mesbin, 2)
+    elif mesbin.count('0') == 0:
+        mes=int(1)
+    if mes > 12:
+        mes = int(12)
+    if mes < 1:
+        mes = int(1)
+
     diabin=binario[10:15]
-    dia=int(diabin, 2)
+    if diabin.count('0') != 0:
+        dia=int(diabin, 2)
+    elif diabin.count('0') == 0:
+        dia=int(1)
+    if dia > 31:
+        dia = int(31)
+    if dia < 1:
+        dia = int(1)
+
     horabin=binario[15:20]
-    hora=int(horabin, 2)
+    if horabin.count('0') != 0:
+        hora=int(horabin, 2)
+    elif horabin.count('0') == 0:
+        hora=int(1)
+    if hora > 23:
+        hora = int(23)
+
     minutobin=binario[20:26]
     if minutobin.count('0') != 0:
         minuto=int(minutobin, 2)
     elif minutobin.count('0') == 0:
-        minuto=int(0)
+        minuto=int(1)
+    if minuto > 59:
+        minuto = int(59)
+
     segundobin=binario[26:32]
     if segundobin.count('0') != 0:
         segundo=int(segundobin, 2)
     elif segundobin.count('0') == 0:
-        segundo=int(0)
+        segundo=int(1)
+    if segundo > 59:
+        segundo = int(59)
     #10176421
     
     timedict = {
@@ -114,6 +144,7 @@ with open(arq, "rb") as bytes:
             #Timestamp do Frame
             bytes.seek(byte+16,0)
             timestamp = int.from_bytes(bytes.read(4), byteorder='big')
+            #print(bin(timestamp))
             timestamp = timestamp_translate(str(hex(timestamp)).replace('0x', ''))
 
         if fDHAV == offset:
@@ -127,7 +158,10 @@ with open(arq, "rb") as bytes:
                     bytes.seek(header,0)
                     frameMatch=bytes.read(footer-header)
                     framename="%s_Extracted/CAM%s/%i-CAM%s-%i-%i-%i-%i-%i-%i-TF%i.dat" %(arq, camNumber, seqFrame, camNumber, timestamp['dia'], timestamp['mes'], timestamp['ano'],timestamp['hora'],timestamp['minuto'],timestamp['segundo'],int(binascii.b2a_hex(typeframe), 16))
+                    #print(timestamp['ano']+2000, timestamp['mes'], timestamp['dia'], timestamp['hora'], timestamp['minuto'], timestamp['segundo'])
+                    #print("Dia: %i\nMes: %i\nAno:%i\nHora:%i\nMinuto:%i\nSegundo:%i\n" %(timestamp['dia'], timestamp['mes'], timestamp['ano']+2000, timestamp['hora'], timestamp['minuto'], timestamp['segundo']))
                     dt = datetime(timestamp['ano']+2000, timestamp['mes'], timestamp['dia'], timestamp['hora'], timestamp['minuto'], timestamp['segundo'])
+
                     #print(dateforma)
                     with open(framename, "wb") as wframe:
                         wframe.write(frameMatch)
@@ -143,4 +177,6 @@ with open(arq, "rb") as bytes:
     conn.close()
     now = datetime.now()
     beginning_of_day = datetime.combine(now.date(), time(0))
+    print("Termino: ")
     print (now - beginning_of_day)
+    print("----------------------")
