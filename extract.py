@@ -1,12 +1,13 @@
 #!/usr/bin/env python3.7
 
-
 import sys
 import os
 import binascii
 import time
 from datetime import datetime, time
 import sqlite3
+import hashlib
+
 arq=sys.argv[1]
 now = datetime.now()
 beginning_of_day = datetime.combine(now.date(), time(0))
@@ -19,8 +20,9 @@ else:
     os.system("rm -rf %s_Extracted" %arq)
     os.system("mkdir %s_Extracted" %arq)
 
+
+#Cria a estrutura do banco SQLite para relatório da analise
 def createDB():
-    #os.system('rm %s.db' %arq)
     conn = sqlite3.connect('relatorio.db')
     
     # definindo um cursor
@@ -35,12 +37,51 @@ def createDB():
             typeframe INTERGER NOT NULL,
             sizeframe INTEGER NOT NULL,
             dateframe DATE NOT NULL,
-            filescanned TEXT NOT NULL
+            filescanned TEXT NOT NULL,
+            filehash TEXT NOT NULL
     );
     """)
     # desconectando...
     conn.commit()
     conn.close()
+
+#Calcula hash SHA256 do arquivo de argumento
+def sha256hash(filename):
+    BUF_SIZE = 65536 #Lê o arquivo em blocos de 64 KB
+
+    sha256 = hashlib.sha256()
+
+    with open(filename, 'rb') as f:
+        while True:
+            data = f.read(BUF_SIZE)
+            if not data:
+                break
+            sha256.update(data)
+
+    hashfile = sha256.hexdigest()
+    return hashfile #Retorna a hash final
+
+def deleteHash(archive, hasharq):
+    conn = sqlite3.connect(archive)
+    cursor = conn.cursor()
+    cursor.execute("""DELETE FROM framesdhav WHERE filehash = '%s';
+    """ %hasharq)
+    rows = cursor.fetchall()
+    # desconectando...
+    conn.commit()
+    conn.close()
+    return rows
+
+def checkFileAnalized(archive, hasharq):
+    conn = sqlite3.connect(archive)
+    cursor = conn.cursor()
+    cursor.execute("""SELECT COUNT(filehash) FROM framesdhav WHERE filehash = '%s';
+    """ %hasharq)
+    rows = cursor.fetchall()
+    # desconectando...
+    conn.commit()
+    conn.close()
+    return rows
 
 #Transforma Hex em Binario(string) depois processa o Timestamp
 def timestamp_translate(timestamp):
@@ -100,7 +141,6 @@ def timestamp_translate(timestamp):
         segundo=int(1)
     if segundo > 59:
         segundo = int(59)
-    #10176421
     
     timedict = {
         "dia": dia,
@@ -112,71 +152,86 @@ def timestamp_translate(timestamp):
     }
     return timedict
 
-mDHAV = b'\x44\x48\x41\x56'
-fDHAV = b'\x64\x68\x61\x76'
-filesize = os.path.getsize(arq)
-createDB()
-with open(arq, "rb") as bytes:
-    conn = sqlite3.connect('relatorio.db')
-    
-    # definindo um cursor
-    cursor = conn.cursor()
-    for byte in range(filesize):
-        bytes.seek(byte, 0)
-        offset = bytes.read(4)
-        if mDHAV == offset:
-            header=byte
-            #Tipo de Frame Primário ou Dependente FD/FC/F1 respectivamente
-            bytes.seek(byte+4,0)
-            typeframe = bytes.read(1)
-            #Numero do Canal/Camera do Frame
-            bytes.seek(byte+6,0)
-            camNumber = int(binascii.b2a_hex(bytes.read(1)), 16)+1
-            folderCam=os.path.isdir("%s_Extracted/CAM%s" %(arq, camNumber))
-            if folderCam == False:
-                os.system("mkdir %s_Extracted/CAM%s" %(arq, camNumber))
-            #Numero Sequencial do Frame
-            bytes.seek(byte+8,0)
-            seqFrame = int.from_bytes(bytes.read(4), byteorder='little')
-            #Tamanho em Bytes do Frame
-            bytes.seek(byte+12,0)
-            sizeFrame = int.from_bytes(bytes.read(4), byteorder='little')
-            #Timestamp do Frame
-            bytes.seek(byte+16,0)
-            timestamp = int.from_bytes(bytes.read(4), byteorder='big')
-            #print(bin(timestamp))
-            timestamp = timestamp_translate(str(hex(timestamp)).replace('0x', ''))
+def main():
+    mDHAV = b'\x44\x48\x41\x56'
+    fDHAV = b'\x64\x68\x61\x76'
+    filesize = os.path.getsize(arq)
+    filehash = sha256hash(arq)
+    option = "OPTION"
+    createDB()
+    ccheck = checkFileAnalized('relatorio.db', filehash)[0]
 
-        if fDHAV == offset:
-            footer=byte
-            try:
-                header
-            except NameError:
-                header = None
-            if header != None:
-                if header != 0:
-                    bytes.seek(header,0)
-                    frameMatch=bytes.read(footer-header)
-                    framename="%s_Extracted/CAM%s/%i-CAM%s-%i-%i-%i-%i-%i-%i-TF%i.dat" %(arq, camNumber, seqFrame, camNumber, timestamp['dia'], timestamp['mes'], timestamp['ano'],timestamp['hora'],timestamp['minuto'],timestamp['segundo'],int(binascii.b2a_hex(typeframe), 16))
-                    #print(timestamp['ano']+2000, timestamp['mes'], timestamp['dia'], timestamp['hora'], timestamp['minuto'], timestamp['segundo'])
-                    #print("Dia: %i\nMes: %i\nAno:%i\nHora:%i\nMinuto:%i\nSegundo:%i\n" %(timestamp['dia'], timestamp['mes'], timestamp['ano']+2000, timestamp['hora'], timestamp['minuto'], timestamp['segundo']))
-                    dt = datetime(timestamp['ano']+2000, timestamp['mes'], timestamp['dia'], timestamp['hora'], timestamp['minuto'], timestamp['segundo'])
+    if ccheck[0] > 0:
+        print("\nArquivo %s de HASH %s ja foi analisado\nHash encontrada no relatorio.db\n" %(arq, filehash))
+        print("Total de %i frames ja processados" %ccheck[0])
+        option = input("Deseja deletar do relatorio.db as entradas deste arquivo? (S/N): ")
+        if option == 'S' or option == 's':
+            deleteHash('relatorio.db', filehash)
+            print("Processando...")
+            option = 'n'
+            main()
+        if option == 'N' or option == 'n':
+            del option
+            print("Terminado...")
+            exit()
 
-                    #print(dateforma)
-                    with open(framename, "wb") as wframe:
-                        wframe.write(frameMatch)
-                        cursor.execute("""
-                        INSERT INTO framesdhav (seqframe, cam, typeframe, sizeframe, dateframe, filescanned)
-                        VALUES (%i, %s, %i, %i, '%s', '%s')
-                        """ %(seqFrame, camNumber, int(binascii.b2a_hex(typeframe), 16), sizeFrame, dt, arq))
-                    del header
-                    del footer
-            else:
-                header=0
-    conn.commit()
-    conn.close()
-    now = datetime.now()
-    beginning_of_day = datetime.combine(now.date(), time(0))
-    print("Termino: ")
-    print (now - beginning_of_day)
-    print("----------------------")
+    with open(arq, "rb") as bytes:
+        conn = sqlite3.connect('relatorio.db')
+        
+        # definindo um cursor
+        cursor = conn.cursor()
+        for byte in range(filesize):
+            bytes.seek(byte, 0)
+            offset = bytes.read(4)
+            if mDHAV == offset:
+                header=byte
+                #Tipo de Frame Primário ou Dependente FD/FC/F1 respectivamente
+                bytes.seek(byte+4,0)
+                typeframe = bytes.read(1)
+                #Numero do Canal/Camera do Frame
+                bytes.seek(byte+6,0)
+                camNumber = int(binascii.b2a_hex(bytes.read(1)), 16)+1
+                folderCam=os.path.isdir("%s_Extracted/CAM%s" %(arq, camNumber))
+                if folderCam == False:
+                    os.system("mkdir %s_Extracted/CAM%s" %(arq, camNumber))
+                #Numero Sequencial do Frame
+                bytes.seek(byte+8,0)
+                seqFrame = int.from_bytes(bytes.read(4), byteorder='little')
+                #Tamanho em Bytes do Frame
+                bytes.seek(byte+12,0)
+                sizeFrame = int.from_bytes(bytes.read(4), byteorder='little')
+                #Timestamp do Frame
+                bytes.seek(byte+16,0)
+                timestamp = int.from_bytes(bytes.read(4), byteorder='big')
+                timestamp = timestamp_translate(str(hex(timestamp)).replace('0x', ''))
+
+            if fDHAV == offset:
+                footer=byte
+                try:
+                    header
+                except NameError:
+                    header = None
+                if header != None:
+                    if header != 0:
+                        bytes.seek(header,0)
+                        frameMatch=bytes.read(footer-header)
+                        framename="%s_Extracted/CAM%s/%i-CAM%s-%i-%i-%i-%i-%i-%i-TF%i.dat" %(arq, camNumber, seqFrame, camNumber, timestamp['dia'], timestamp['mes'], timestamp['ano'],timestamp['hora'],timestamp['minuto'],timestamp['segundo'],int(binascii.b2a_hex(typeframe), 16))
+                        dt = datetime(timestamp['ano']+2000, timestamp['mes'], timestamp['dia'], timestamp['hora'], timestamp['minuto'], timestamp['segundo'])
+                        with open(framename, "wb") as wframe:
+                            wframe.write(frameMatch)
+                            cursor.execute("""
+                            INSERT INTO framesdhav (seqframe, cam, typeframe, sizeframe, dateframe, filescanned, filehash)
+                            VALUES (%i, %s, %i, %i, '%s', '%s', '%s')
+                            """ %(seqFrame, camNumber, int(binascii.b2a_hex(typeframe), 16), sizeFrame, dt, arq, filehash))
+                        del header
+                        del footer
+                else:
+                    header=0
+        conn.commit()
+        conn.close()
+        now = datetime.now()
+        beginning_of_day = datetime.combine(now.date(), time(0))
+        print("Termino: ")
+        print (now - beginning_of_day)
+        print("----------------------")
+main()
