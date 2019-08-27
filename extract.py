@@ -1,5 +1,9 @@
 #!/usr/bin/env python3.7
 
+###############################################################
+##### Extract Frames DHAV from Images Binary of DD command ####
+###############################################################
+
 import sys
 import os
 import binascii
